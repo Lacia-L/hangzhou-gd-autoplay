@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         杭州国动视频 自动刷课 (gdypt autoplay)
 // @namespace    https://github.com/Lacia-L/hangzhou-gd-autoplay
-// @version      1.0.0
+// @version      1.0.1
 // @description  自动把「杭州国动视频」平台(gdypt.rf.hangzhou.gov.cn)上未学习的视频逐个以 1x 原速真实播放到结束，使其翻转为「已学习」。支持：前台可见检测、卡死自动跳过、定量/定时自动停机、进度本地持久化(刷新不丢)、悬浮控制面板。
 // @author       Lacia-L
 // @match        https://gdypt.rf.hangzhou.gov.cn/*
@@ -82,14 +82,23 @@
     if (els && els.log) els.log.textContent = G.log.slice(-6).reverse().join('\n');
   }
 
-  // 取卡片稳定唯一 id：优先缩略图 getFileThumbnail/{id}，退化到标题文本
+  // 取卡片稳定唯一 id：getFileThumbnail/{id} 可能出现在背景图(span.bg-video-*)或旧版 <img>，都兼容；再退化到标题
   function cardId(card) {
-    const all = card.querySelectorAll ? card.querySelectorAll('img') : [];
-    for (let i = 0; i < all.length; i++) {
-      const src = all[i].getAttribute('src') || all[i].currentSrc || '';
-      const m = src.match(/getFileThumbnail\/([A-Za-z0-9_\-]+)/);
-      if (m) return 't' + m[1];
+    const idFrom = s => { const m = (s || '').match(/getFileThumbnail\/([A-Za-z0-9_\-]+)/); return m ? m[1] : null; };
+    let id = null;
+    const bgs = card.querySelectorAll('[class*="bg-video"], [style*="getFileThumbnail"]');
+    for (let i = 0; i < bgs.length && !id; i++) {
+      id = idFrom(bgs[i].getAttribute('style')) || idFrom(getComputedStyle(bgs[i]).backgroundImage);
     }
+    if (!id) {
+      const imgs = card.querySelectorAll('img');
+      for (let i = 0; i < imgs.length && !id; i++) id = idFrom(imgs[i].getAttribute('src') || imgs[i].currentSrc);
+    }
+    if (!id) {
+      const any = card.querySelectorAll('*');
+      for (let i = 0; i < any.length && !id; i++) { const el = any[i]; if (el.style) id = idFrom(el.style.background) || idFrom(el.style.backgroundImage); }
+    }
+    if (id) return 't' + id;
     const name = ((card.querySelector(CFG.NAME) || {}).textContent || 'untitled').trim();
     return 'n' + name;
   }
