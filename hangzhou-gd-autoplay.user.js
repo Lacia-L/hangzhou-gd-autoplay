@@ -1,11 +1,13 @@
 // ==UserScript==
 // @name         杭州国动视频 自动刷课 (gdypt autoplay)
 // @namespace    https://github.com/Lacia-L/hangzhou-gd-autoplay
-// @version      1.0.3
+// @version      1.0.4
 // @description  自动把「杭州国动视频」平台(gdypt.rf.hangzhou.gov.cn)上未学习的视频逐个以 1x 原速真实播放到结束，使其翻转为「已学习」。支持：前台可见检测、卡死自动跳过、定量/定时自动停机、进度本地持久化(刷新不丢)、悬浮控制面板。
 // @author       Lacia-L
 // @match        https://gdypt.rf.hangzhou.gov.cn/*
 // @match        https://gdypt.rf.hangzhou.gov.cn:9443/*
+// @downloadURL  https://fastly.jsdelivr.net/gh/Lacia-L/hangzhou-gd-autoplay@master/hangzhou-gd-autoplay.user.js
+// @updateURL    https://fastly.jsdelivr.net/gh/Lacia-L/hangzhou-gd-autoplay@master/hangzhou-gd-autoplay.user.js
 // @grant        none
 // @run-at       document-idle
 // @noframes
