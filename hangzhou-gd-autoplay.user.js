@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         杭州国动视频 自动刷课 (gdypt autoplay)
 // @namespace    https://github.com/Lacia-L/hangzhou-gd-autoplay
-// @version      1.0.2
+// @version      1.0.3
 // @description  自动把「杭州国动视频」平台(gdypt.rf.hangzhou.gov.cn)上未学习的视频逐个以 1x 原速真实播放到结束，使其翻转为「已学习」。支持：前台可见检测、卡死自动跳过、定量/定时自动停机、进度本地持久化(刷新不丢)、悬浮控制面板。
 // @author       Lacia-L
 // @match        https://gdypt.rf.hangzhou.gov.cn/*
@@ -244,7 +244,7 @@
         '<div style="display:flex;gap:6px;align-items:center;margin:4px 0">' +
           '<label style="width:56px">倍速</label><select id="gd-rate" style="flex:1;padding:4px;border:1px solid #ccc;border-radius:4px">' +
             '<option value="1">1x（默认，计入已学习）</option>' +
-            '<option value="1.5">1.5x</option><option value="2">2x</option><option value="3">3x</option><option value="4">4x</option>' +
+            '<option value="1.5">1.5x</option><option value="2">2x（网页上限）</option>' +
           '</select>' +
         '</div>' +
         '<div id="gd-rate-warn" style="color:#d4380d;font-size:11px;margin:0 0 4px;display:none">⚠ 倍速可能不被计入「已学习」，仅 1x 完整播放最稳妥</div>' +
@@ -276,10 +276,11 @@
     dl.onchange = () => { localStorage.setItem('gd_deadline', dl.value ? String(new Date(dl.value).getTime()) : '0'); };
 
     const rt = box.querySelector('#gd-rate'), rwarn = box.querySelector('#gd-rate-warn');
-    const savedRate = parseFloat(localStorage.getItem('gd_rate') || '1') || 1;
+    const savedRate = Math.min(2, Math.max(1, parseFloat(localStorage.getItem('gd_rate') || '1') || 1));
     G.rate = savedRate; rt.value = String(savedRate); rwarn.style.display = savedRate > 1 ? 'block' : 'none';
+    localStorage.setItem('gd_rate', String(savedRate));
     rt.onchange = () => {
-      G.rate = parseFloat(rt.value) || 1;
+      G.rate = Math.min(2, parseFloat(rt.value) || 1);
       localStorage.setItem('gd_rate', String(G.rate));
       rwarn.style.display = G.rate > 1 ? 'block' : 'none';
       const v = document.querySelector('video'); if (v) { try { v.playbackRate = G.rate; } catch (e) {} }
