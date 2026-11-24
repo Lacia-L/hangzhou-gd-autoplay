@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         杭州国动视频 自动刷课 (gdypt autoplay)
 // @namespace    https://github.com/Lacia-L/hangzhou-gd-autoplay
-// @version      1.0.1
+// @version      1.0.2
 // @description  自动把「杭州国动视频」平台(gdypt.rf.hangzhou.gov.cn)上未学习的视频逐个以 1x 原速真实播放到结束，使其翻转为「已学习」。支持：前台可见检测、卡死自动跳过、定量/定时自动停机、进度本地持久化(刷新不丢)、悬浮控制面板。
 // @author       Lacia-L
 // @match        https://gdypt.rf.hangzhou.gov.cn/*
@@ -60,7 +60,8 @@
     lastCur: -1,
     lastProgress: 0,
     log: [],
-    finished: false
+    finished: false,
+    rate: 1             // 播放倍速；默认 1（倍速可能不计入「已学习」）
   };
 
   // ---- 恢复历史进度(刷新/重进页面不丢) ----
@@ -141,7 +142,7 @@
         } else { G.state = 'loading'; }
         return;
       }
-      if (v.paused) { v.muted = true; try { v.playbackRate = 1; } catch (e) {} const p = v.play(); if (p && p.catch) p.catch(() => {}); G.state = 'play'; }
+      if (v.paused) { v.muted = true; try { v.playbackRate = G.rate; } catch (e) {} const p = v.play(); if (p && p.catch) p.catch(() => {}); G.state = 'play'; }
 
       // 进度/卡死检测
       if (Math.abs(v.currentTime - G.lastCur) < 0.25) {
@@ -208,7 +209,7 @@
   }
   function paint() {
     if (!els) return;
-    els.status.textContent = (G.running ? '● 运行中' : '○ 已停止') + ' · ' + stateLabel();
+    els.status.textContent = (G.running ? '● 运行中' : '○ 已停止') + ' · ' + stateLabel() + ' · ' + G.rate + 'x';
     els.status.style.color = G.running ? '#0a7d32' : '#888';
     els.cur.textContent = G.curName || '—';
     els.count.textContent = '本次完成 ' + G.played + ' · 跳过 ' + G.skipped + ' · 累计已学 ' + doneCount();
@@ -240,6 +241,13 @@
         '<div style="display:flex;gap:6px;align-items:center;margin:4px 0">' +
           '<label style="width:56px">截止</label><input id="gd-deadline" type="datetime-local" style="flex:1;padding:4px;border:1px solid #ccc;border-radius:4px">' +
         '</div>' +
+        '<div style="display:flex;gap:6px;align-items:center;margin:4px 0">' +
+          '<label style="width:56px">倍速</label><select id="gd-rate" style="flex:1;padding:4px;border:1px solid #ccc;border-radius:4px">' +
+            '<option value="1">1x（默认，计入已学习）</option>' +
+            '<option value="1.5">1.5x</option><option value="2">2x</option><option value="3">3x</option><option value="4">4x</option>' +
+          '</select>' +
+        '</div>' +
+        '<div id="gd-rate-warn" style="color:#d4380d;font-size:11px;margin:0 0 4px;display:none">⚠ 倍速可能不被计入「已学习」，仅 1x 完整播放最稳妥</div>' +
         '<label style="display:flex;align-items:center;gap:6px;margin:4px 0"><input id="gd-auto" type="checkbox"> 打开页面后自动开始</label>' +
         '<div style="display:flex;gap:6px;margin-top:6px">' +
           '<button id="gd-reset" style="flex:1;padding:5px;background:#fff;color:#d4380d;border:1px solid #d4380d;border-radius:6px;cursor:pointer">清除本地进度</button>' +
@@ -266,6 +274,17 @@
     const tg = box.querySelector('#gd-target'); tg.value = getTarget() || ''; tg.onchange = () => { localStorage.setItem('gd_target', String(parseInt(tg.value, 10) || 0)); };
     const dl = box.querySelector('#gd-deadline'); const dlv = getDeadline(); if (dlv) { const d = new Date(dlv); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); dl.value = d.toISOString().slice(0, 16); }
     dl.onchange = () => { localStorage.setItem('gd_deadline', dl.value ? String(new Date(dl.value).getTime()) : '0'); };
+
+    const rt = box.querySelector('#gd-rate'), rwarn = box.querySelector('#gd-rate-warn');
+    const savedRate = parseFloat(localStorage.getItem('gd_rate') || '1') || 1;
+    G.rate = savedRate; rt.value = String(savedRate); rwarn.style.display = savedRate > 1 ? 'block' : 'none';
+    rt.onchange = () => {
+      G.rate = parseFloat(rt.value) || 1;
+      localStorage.setItem('gd_rate', String(G.rate));
+      rwarn.style.display = G.rate > 1 ? 'block' : 'none';
+      const v = document.querySelector('video'); if (v) { try { v.playbackRate = G.rate; } catch (e) {} }
+      log('倍速 -> ' + G.rate + 'x' + (G.rate > 1 ? '(可能不计入已学习)' : ''));
+    };
 
     // 折叠 + 拖拽
     const body = box.querySelector('#gd-body'); let min = false;
